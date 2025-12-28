@@ -197,6 +197,13 @@ This project intentionally does **not** include:
 
 ---
 
+## Future Improvements
+
+- Optimize TTL expiration by replacing periodic O(n) shard scans with a priority-queue–based scheduler.
+- Introduce a timing-wheel–based expiration strategy for large key counts.
+- Add configurable shard count based on CPU cores.
+
+
 ## License
 
 MIT
