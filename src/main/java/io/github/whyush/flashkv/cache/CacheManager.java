@@ -21,7 +21,6 @@ public class CacheManager implements Cache {
         int shardCount = Math.min(DEFAULT_SHARDS, capacity);
         this.shardCount = shardCount;
         this.shards = new CacheShard[shardCount];
-        this.expiryScheduler = new ExpiryScheduler(shards, metrics);
         this.metrics = metrics;
 
         int baseShardCapacity = capacity / shardCount;
@@ -32,6 +31,7 @@ public class CacheManager implements Cache {
             shards[i] = new CacheShard(i, shardCapacity);
         }
 
+        this.expiryScheduler = new ExpiryScheduler(shards, metrics);
         this.expiryScheduler.start();
     }
 
@@ -78,6 +78,11 @@ public class CacheManager implements Cache {
 
         try {
             boolean isNewKey = !shard.containsKey(key);
+            // Prefer reclaiming expired entries to evicting a still-live LRU entry.
+            int expired = shard.removeExpiredEntries();
+            if (expired > 0) {
+                metrics.recordExpired(expired);
+            }
             if (isNewKey && shard.isFull()) {
                 evictLRU(shard);
             }

@@ -9,6 +9,7 @@ import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 
 @Slf4j
@@ -17,11 +18,17 @@ public class ClientHandler implements Runnable {
     private final Socket socket;
     private final Cache cache;
     private final Metrics metrics;
+    private final Runnable onClose;
 
     public ClientHandler(Socket socket, Cache cache, Metrics metrics) {
+        this(socket, cache, metrics, () -> { });
+    }
+
+    public ClientHandler(Socket socket, Cache cache, Metrics metrics, Runnable onClose) {
         this.socket = socket;
         this.cache = cache;
         this.metrics = metrics;
+        this.onClose = onClose;
     }
 
     @Override
@@ -47,8 +54,17 @@ public class ClientHandler implements Runnable {
                     break;
                 }
             }
+        } catch (SocketTimeoutException e) {
+            log.debug("Closing idle client {} after read timeout", socket.getRemoteSocketAddress());
         } catch (Exception e) {
-            log.error("Error while parsing command closing connection");
+            log.debug("Closing client {} after I/O error", socket.getRemoteSocketAddress(), e);
+        } finally {
+            try {
+                socket.close();
+            } catch (Exception ignored) {
+                // The connection is already unusable.
+            }
+            onClose.run();
         }
     }
 }

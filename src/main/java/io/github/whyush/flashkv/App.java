@@ -9,10 +9,13 @@ public class App {
 
         int port = args.length > 0 ? Integer.parseInt(args[0]) : 8080;
         int capacity = args.length > 1 ? Integer.parseInt(args[1]) : 1000;
+        int workers = args.length > 2 ? Integer.parseInt(args[2]) : TcpServer.defaultWorkerCount();
+        int queueCapacity = args.length > 3 ? Integer.parseInt(args[3]) : TcpServer.defaultQueueCapacity();
+        int readTimeoutMillis = args.length > 4 ? Integer.parseInt(args[4]) : 30_000;
 
         Metrics metrics = new Metrics();
         CacheManager cache = new CacheManager(capacity, metrics);
-        TcpServer server = new TcpServer(port, cache, metrics);
+        TcpServer server = new TcpServer(port, cache, metrics, workers, queueCapacity, readTimeoutMillis);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutting down...");

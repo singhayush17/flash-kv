@@ -53,7 +53,7 @@ public class CacheShard {
 
         while (iterator.hasNext()) {
             CacheEntry entry = iterator.next().getValue();
-            if (entry.expiryTimeMillis < now) {
+            if (entry.expiryTimeMillis <= now) {
                 iterator.remove();
                 removed++;
             }
