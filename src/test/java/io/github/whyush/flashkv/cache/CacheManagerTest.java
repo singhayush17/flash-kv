@@ -4,6 +4,14 @@ import io.github.whyush.flashkv.metrics.Metrics;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class CacheManagerTest {
@@ -104,5 +112,34 @@ class CacheManagerTest {
 
         //evicted by background thread, if would've used get, lazy eviction would've been triggered
         assertEquals(0, cache.approximateSize());
+    }
+
+    @Test
+    void zeroTtlIsImmediatelyExpired() {
+        cache = new CacheManager(1, metrics);
+        cache.put("now", "gone", 0);
+        assertNull(cache.get("now"));
+    }
+
+    @Test
+    void concurrentGetSetAndDeleteRemainWithinCapacity() throws Exception {
+        cache = new CacheManager(128, metrics);
+        ExecutorService pool = Executors.newFixedThreadPool(16);
+        List<Callable<Void>> work = new ArrayList<>();
+        for (int thread = 0; thread < 16; thread++) {
+            int id = thread;
+            work.add(() -> {
+                for (int i = 0; i < 2_000; i++) {
+                    String key = "key-" + ((i + id) % 256);
+                    cache.put(key, "value", 60_000);
+                    cache.get(key);
+                    if (i % 7 == 0) cache.delete(key);
+                }
+                return null;
+            });
+        }
+        for (Future<Void> future : pool.invokeAll(work)) future.get(10, TimeUnit.SECONDS);
+        pool.shutdownNow();
+        assertTrue(cache.approximateSize() <= 128);
     }
 }

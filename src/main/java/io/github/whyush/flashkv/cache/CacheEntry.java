@@ -10,11 +10,12 @@ public class CacheEntry {
     public CacheEntry(String key, String value, long ttlInMillis) {
         this.key = key;
         this.value = value;
-        this.lastAccessTimeMillis = System.currentTimeMillis();
-        this.expiryTimeMillis = ttlInMillis + System.currentTimeMillis();
+        long now = System.currentTimeMillis();
+        this.lastAccessTimeMillis = now;
+        this.expiryTimeMillis = ttlInMillis > Long.MAX_VALUE - now ? Long.MAX_VALUE : now + ttlInMillis;
     }
 
     public boolean isExpired() {
-        return this.expiryTimeMillis < System.currentTimeMillis();
+        return this.expiryTimeMillis <= System.currentTimeMillis();
     }
 }

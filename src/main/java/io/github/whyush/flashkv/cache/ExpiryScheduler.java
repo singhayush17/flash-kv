@@ -41,6 +41,6 @@ public class ExpiryScheduler {
     }
 
     public void shutdown() {
-        executor.shutdown();
+        executor.shutdownNow();
     }
 }

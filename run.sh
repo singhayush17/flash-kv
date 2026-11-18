@@ -2,6 +2,9 @@
 
 PORT=${PORT:-8080}
 CAPACITY=${CAPACITY:-100}
+WORKERS=${WORKERS:-16}
+QUEUE_CAPACITY=${QUEUE_CAPACITY:-32}
+READ_TIMEOUT_MS=${READ_TIMEOUT_MS:-30000}
 
 JAR="target/flash-kv.jar"
 
@@ -11,4 +14,4 @@ if [ ! -f "$JAR" ]; then
 fi
 
 echo "Starting FlashKV on port $PORT with capacity $CAPACITY"
-exec java -jar "$JAR" "$PORT" "$CAPACITY"
+exec java -jar "$JAR" "$PORT" "$CAPACITY" "$WORKERS" "$QUEUE_CAPACITY" "$READ_TIMEOUT_MS"
