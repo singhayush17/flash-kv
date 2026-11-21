@@ -40,11 +40,12 @@ public class CommandParser {
 
     private static String handleSet(String input, int argumentStart, Cache cache) {
         int keyEnd = nextWhitespace(input, argumentStart);
-        int ttlStart = skipWhitespace(input, keyEnd);
-        int ttlEnd = nextWhitespace(input, ttlStart);
-        int valueStart = skipWhitespace(input, ttlEnd);
-        if (argumentStart == input.length() || ttlStart == input.length() || valueStart == input.length()) {
-            return "ERROR invalid SET: expected SET <key> <ttl> <value>";
+        int valueStart = skipWhitespace(input, keyEnd);
+        int ttlEnd = trimEnd(input);
+        int ttlStart = lastTokenStart(input, ttlEnd);
+        int valueEnd = trimEnd(input, ttlStart);
+        if (argumentStart == input.length() || valueStart >= valueEnd || ttlStart == ttlEnd) {
+            return "ERROR invalid SET: expected SET <key> <value> <ttl>";
         }
 
         long ttl;
@@ -55,7 +56,7 @@ public class CommandParser {
             return "ERROR invalid SET: TTL must be a valid number";
         }
 
-        cache.put(input.substring(argumentStart, keyEnd), input.substring(valueStart), ttl);
+        cache.put(input.substring(argumentStart, keyEnd), input.substring(valueStart, valueEnd), ttl);
         return "OK";
     }
 
@@ -75,6 +76,22 @@ public class CommandParser {
     private static int skipWhitespace(String input, int start) {
         int index = start;
         while (index < input.length() && Character.isWhitespace(input.charAt(index))) index++;
+        return index;
+    }
+
+    private static int trimEnd(String input) {
+        return trimEnd(input, input.length());
+    }
+
+    private static int trimEnd(String input, int end) {
+        int index = end;
+        while (index > 0 && Character.isWhitespace(input.charAt(index - 1))) index--;
+        return index;
+    }
+
+    private static int lastTokenStart(String input, int end) {
+        int index = end;
+        while (index > 0 && !Character.isWhitespace(input.charAt(index - 1))) index--;
         return index;
     }
 }

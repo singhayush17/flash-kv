@@ -19,7 +19,7 @@ class CommandParserTest {
     @Test
     void parsesCommandsWithoutRegexAndPreservesValueSpaces() {
         cache = new CacheManager(10, metrics);
-        assertEquals("OK", CommandParser.handle("SET key 1000 value with spaces", cache, metrics).getResponse());
+        assertEquals("OK", CommandParser.handle("SET key value with spaces 1000", cache, metrics).getResponse());
         assertEquals("value with spaces", CommandParser.handle("GET key", cache, metrics).getResponse());
         assertEquals("OK", CommandParser.handle("DELETE key", cache, metrics).getResponse());
         assertEquals("NULL", CommandParser.handle("GET key", cache, metrics).getResponse());

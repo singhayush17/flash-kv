@@ -105,7 +105,7 @@ def command_for(rng, args):
     operation = "GET" if rng.random() < args.get_ratio else "SET"
     if operation == "SET":
         key = key_for(rng, args)
-        return operation, f"SET {key} {args.ttl_ms} value-{key}\n"
+        return operation, f"SET {key} value-{key} {args.ttl_ms}\n"
     is_hit = args.prepopulate_keys > 0 and rng.random() < args.get_hit_ratio
     key = key_for(rng, args) if is_hit else key_for(rng, args, "miss")
     return operation, f"GET {key}\n"
@@ -190,7 +190,7 @@ def prepopulate(args):
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         reader = sock.makefile("rb")
         for index in range(attempted):
-            answer = execute(sock, reader, f"SET key-{index} {args.ttl_ms} value-key-{index}\n")
+            answer = execute(sock, reader, f"SET key-{index} value-key-{index} {args.ttl_ms}\n")
             if answer != b"OK":
                 raise RuntimeError(f"prepopulation failed at key-{index}: {answer.decode('utf-8', 'replace')}")
             succeeded += 1

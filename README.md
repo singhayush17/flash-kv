@@ -15,7 +15,7 @@ On shutdown the server closes the listening socket and all tracked connections, 
 ## Protocol
 
 ```
-SET <key> <ttlMillis> <value>
+SET <key> <value> <ttlMillis>
 GET <key>
 DELETE <key>
 STATS
@@ -23,6 +23,13 @@ QUIT
 ```
 
 Responses are one newline-delimited line. `GET` returns `NULL` for a missing or expired key.
+
+For example:
+
+```text
+SET greeting hello 10000
+GET greeting
+```
 
 ## Build, run, and test
 

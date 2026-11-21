@@ -57,7 +57,7 @@ public final class JavaBenchmarkClient {
         if (config.prepopulateKeys == 0) return;
         try (Connection connection = Connection.open(config)) {
             for (int key = 0; key < config.prepopulateKeys; key++) {
-                if (!"OK".equals(connection.command("SET key-" + key + " " + config.ttlMillis + " value-key-" + key))) {
+                if (!"OK".equals(connection.command("SET key-" + key + " value-key-" + key + " " + config.ttlMillis))) {
                     throw new IOException("prepopulation failed at key " + key);
                 }
             }
@@ -102,7 +102,7 @@ public final class JavaBenchmarkClient {
         String key;
         if (get && config.prepopulateKeys > 0 && random.nextDouble() < config.getHitRatio) key = "key-" + keyIndex(random, config);
         else key = get ? "miss-" + keyIndex(random, config) : "key-" + keyIndex(random, config);
-        String command = get ? "GET " + key : "SET " + key + " " + config.ttlMillis + " value-" + key;
+        String command = get ? "GET " + key : "SET " + key + " value-" + key + " " + config.ttlMillis;
         long started = record ? System.nanoTime() : 0;
         String response = connection.command(command);
         if (!record) return;

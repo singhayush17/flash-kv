@@ -41,7 +41,7 @@ class TcpServerTest {
              BufferedReader reader = reader(socket);
              BufferedWriter writer = writer(socket)) {
             writer.write("SE"); writer.flush();
-            writer.write("T split 60000 value\n"); writer.flush();
+            writer.write("T split value 60000\n"); writer.flush();
             assertEquals("OK", reader.readLine());
             writer.write("GET split\n"); writer.flush();
             assertEquals("value", reader.readLine());
@@ -58,7 +58,7 @@ class TcpServerTest {
             work.add(() -> {
                 try (Socket socket = connect(); BufferedReader reader = reader(socket); BufferedWriter writer = writer(socket)) {
                     for (int i = 0; i < 100; i++) {
-                        writer.write("SET c" + id + "-" + i + " 60000 v\n"); writer.flush();
+                        writer.write("SET c" + id + "-" + i + " v 60000\n"); writer.flush();
                         assertEquals("OK", reader.readLine());
                         writer.write("GET c" + id + "-" + i + "\n"); writer.flush();
                         assertEquals("v", reader.readLine());
@@ -77,7 +77,7 @@ class TcpServerTest {
         try (Socket idle = connect()) {
             Thread.sleep(300);
             try (Socket active = connect(); BufferedReader reader = reader(active); BufferedWriter writer = writer(active)) {
-                writer.write("SET after-idle 60000 v\n"); writer.flush();
+                writer.write("SET after-idle v 60000\n"); writer.flush();
                 assertEquals("OK", reader.readLine());
             }
         }
@@ -89,7 +89,7 @@ class TcpServerTest {
         Socket disconnected = connect();
         disconnected.close();
         try (Socket socket = connect(); BufferedReader reader = reader(socket); BufferedWriter writer = writer(socket)) {
-            writer.write("SET still-running 60000 v\n"); writer.flush();
+            writer.write("SET still-running v 60000\n"); writer.flush();
             assertEquals("OK", reader.readLine());
         }
     }
