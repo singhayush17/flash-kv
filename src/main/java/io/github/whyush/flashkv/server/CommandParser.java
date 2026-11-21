@@ -6,53 +6,75 @@ import io.github.whyush.flashkv.metrics.Metrics;
 public class CommandParser {
     public static CommandResult handle(String input, Cache cache, Metrics metrics) {
         try {
-            String[] parts = input.trim().split("\\s+");
-            String cmd = parts[0].toUpperCase();
-
-            return switch (cmd) {
-                case "GET" -> CommandResult.ok(handleGet(parts, cache));
-                case "SET" -> CommandResult.ok(handleSet(parts, cache));
-                case "DELETE" -> CommandResult.ok(handleDelete(parts, cache));
-                case "STATS" -> CommandResult.ok(metrics.snapshot());
-                case "QUIT" -> CommandResult.close("BYE");
-                default -> CommandResult.ok("ERROR unknown command");
-            };
+            int commandEnd = nextWhitespace(input, 0);
+            String command = input.substring(0, commandEnd);
+            int argumentStart = skipWhitespace(input, commandEnd);
+            if (command.equalsIgnoreCase("GET")) {
+                return CommandResult.ok(handleGet(input, argumentStart, cache));
+            }
+            if (command.equalsIgnoreCase("SET")) {
+                return CommandResult.ok(handleSet(input, argumentStart, cache));
+            }
+            if (command.equalsIgnoreCase("DELETE")) {
+                return CommandResult.ok(handleDelete(input, argumentStart, cache));
+            }
+            if (command.equalsIgnoreCase("STATS") && argumentStart == input.length()) {
+                return CommandResult.ok(metrics.snapshot());
+            }
+            if (command.equalsIgnoreCase("QUIT") && argumentStart == input.length()) {
+                return CommandResult.close("BYE");
+            }
+            return CommandResult.ok("ERROR unknown command");
 
         } catch (Exception e) {
             return CommandResult.ok("ERROR " + e.getMessage());
         }
     }
 
-    private static String handleGet(String [] parts, Cache cache) {
-        if (parts.length != 2) return "ERROR invalid GET";
-        String val = cache.get(parts[1]);
+    private static String handleGet(String input, int argumentStart, Cache cache) {
+        int keyEnd = nextWhitespace(input, argumentStart);
+        if (argumentStart == input.length() || skipWhitespace(input, keyEnd) != input.length()) return "ERROR invalid GET";
+        String val = cache.get(input.substring(argumentStart, keyEnd));
         return val == null ? "NULL" : val;
     }
 
-    private static String handleSet(String[] parts, Cache cache) {
-        if (parts.length < 4) return "ERROR invalid SET: expected SET <key> <ttl> <value>";
-
-        String key = parts[1];
+    private static String handleSet(String input, int argumentStart, Cache cache) {
+        int keyEnd = nextWhitespace(input, argumentStart);
+        int ttlStart = skipWhitespace(input, keyEnd);
+        int ttlEnd = nextWhitespace(input, ttlStart);
+        int valueStart = skipWhitespace(input, ttlEnd);
+        if (argumentStart == input.length() || ttlStart == input.length() || valueStart == input.length()) {
+            return "ERROR invalid SET: expected SET <key> <ttl> <value>";
+        }
 
         long ttl;
         try {
-            ttl = Long.parseLong(parts[2]);
+            ttl = Long.parseLong(input.substring(ttlStart, ttlEnd));
             if (ttl < 0) return "ERROR invalid SET: TTL must be non-negative";
         } catch (NumberFormatException e) {
             return "ERROR invalid SET: TTL must be a valid number";
         }
 
-        String value = String.join(" ", java.util.Arrays.copyOfRange(parts, 3, parts.length));
-
-        if (value.isEmpty()) return "ERROR invalid SET: value cannot be empty";
-
-        cache.put(key, value, ttl);
+        cache.put(input.substring(argumentStart, keyEnd), input.substring(valueStart), ttl);
         return "OK";
     }
 
-    private static String handleDelete(String [] parts, Cache cache) {
-        if (parts.length != 2) return "ERROR invalid DELETE";
-        cache.delete(parts[1]);
+    private static String handleDelete(String input, int argumentStart, Cache cache) {
+        int keyEnd = nextWhitespace(input, argumentStart);
+        if (argumentStart == input.length() || skipWhitespace(input, keyEnd) != input.length()) return "ERROR invalid DELETE";
+        cache.delete(input.substring(argumentStart, keyEnd));
         return "OK";
+    }
+
+    private static int nextWhitespace(String input, int start) {
+        int index = start;
+        while (index < input.length() && !Character.isWhitespace(input.charAt(index))) index++;
+        return index;
+    }
+
+    private static int skipWhitespace(String input, int start) {
+        int index = start;
+        while (index < input.length() && Character.isWhitespace(input.charAt(index))) index++;
+        return index;
     }
 }

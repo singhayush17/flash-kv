@@ -100,7 +100,8 @@ class TcpServerTest {
         Socket occupied = connect();
         try (Socket rejected = connect()) {
             rejected.setSoTimeout(1_000);
-            assertEquals(-1, rejected.getInputStream().read());
+            assertEquals("ERROR server busy", new BufferedReader(
+                    new InputStreamReader(rejected.getInputStream(), UTF_8)).readLine());
         } finally {
             occupied.close();
         }
@@ -110,6 +111,10 @@ class TcpServerTest {
     void shutdownClosesListeningAndActiveSockets() throws Exception {
         start(1, 1, 5_000);
         Socket active = connect();
+        BufferedWriter writer = writer(active);
+        writer.write("STATS\n");
+        writer.flush();
+        assertNotNull(reader(active).readLine());
         server.shutdown();
         assertTrue(active.isClosed() || active.getInputStream().read() == -1);
         active.close();

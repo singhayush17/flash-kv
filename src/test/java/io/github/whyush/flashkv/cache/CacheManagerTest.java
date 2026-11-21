@@ -142,4 +142,10 @@ class CacheManagerTest {
         pool.shutdownNow();
         assertTrue(cache.approximateSize() <= 128);
     }
+
+    @Test
+    void requestedShardCountIsBoundedByCapacity() {
+        cache = new CacheManager(3, 64, metrics);
+        assertEquals(3, cache.shardCount());
+    }
 }

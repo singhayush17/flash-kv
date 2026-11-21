@@ -5,6 +5,8 @@ import io.github.whyush.flashkv.metrics.Metrics;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.BufferedWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -71,13 +73,14 @@ public class TcpServer {
                     Socket client = listeningSocket.accept();
                     try {
                         client.setSoTimeout(socketReadTimeoutMillis);
+                        client.setTcpNoDelay(true);
                         activeConnections.add(client);
                         executor.execute(new ClientHandler(client, cache, metrics,
                                 () -> activeConnections.remove(client)));
                         metrics.recordConnection();
                     } catch (java.util.concurrent.RejectedExecutionException rejected) {
                         activeConnections.remove(client);
-                        closeQuietly(client);
+                        rejectAndClose(client);
                         log.warn("Rejecting connection: handler capacity is exhausted");
                     } catch (IOException configurationFailure) {
                         activeConnections.remove(client);
@@ -143,6 +146,18 @@ public class TcpServer {
             } catch (IOException ignored) {
                 // Closing a socket is best effort during shutdown.
             }
+        }
+    }
+
+    private static void rejectAndClose(Socket socket) {
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))) {
+            writer.write("ERROR server busy");
+            writer.newLine();
+            writer.flush();
+        } catch (IOException ignored) {
+            // The peer may already have disconnected before the rejection response.
+        } finally {
+            closeQuietly(socket);
         }
     }
 }

@@ -14,11 +14,15 @@ public class CacheManager implements Cache {
     private static final int DEFAULT_SHARDS = 4;
 
     public CacheManager(int capacity, Metrics metrics) {
+        this(capacity, DEFAULT_SHARDS, metrics);
+    }
 
-        if (capacity <= 0) throw new IllegalArgumentException();
+    public CacheManager(int capacity, int requestedShardCount, Metrics metrics) {
 
-        //in case size < no of shards
-        int shardCount = Math.min(DEFAULT_SHARDS, capacity);
+        if (capacity <= 0 || requestedShardCount <= 0) throw new IllegalArgumentException();
+
+        // A shard must have at least one entry of capacity.
+        int shardCount = Math.min(requestedShardCount, capacity);
         this.shardCount = shardCount;
         this.shards = new CacheShard[shardCount];
         this.metrics = metrics;
@@ -78,13 +82,16 @@ public class CacheManager implements Cache {
 
         try {
             boolean isNewKey = !shard.containsKey(key);
-            // Prefer reclaiming expired entries to evicting a still-live LRU entry.
-            int expired = shard.removeExpiredEntries();
-            if (expired > 0) {
-                metrics.recordExpired(expired);
-            }
             if (isNewKey && shard.isFull()) {
-                evictLRU(shard);
+                // Scan only under capacity pressure. Scanning every SET made writes O(shard-size)
+                // even though the scheduler and lazy GET path already handle normal expiry.
+                int expired = shard.removeExpiredEntries();
+                if (expired > 0) {
+                    metrics.recordExpired(expired);
+                }
+                if (shard.isFull()) {
+                    evictLRU(shard);
+                }
             }
             shard.put(key, new CacheEntry(key, value, ttlMillis));
         } finally {
@@ -127,5 +134,9 @@ public class CacheManager implements Cache {
 
     public void shutdown() {
         expiryScheduler.shutdown();
+    }
+
+    public int shardCount() {
+        return shardCount;
     }
 }

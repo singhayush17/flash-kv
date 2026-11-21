@@ -12,9 +12,10 @@ public class App {
         int workers = args.length > 2 ? Integer.parseInt(args[2]) : TcpServer.defaultWorkerCount();
         int queueCapacity = args.length > 3 ? Integer.parseInt(args[3]) : TcpServer.defaultQueueCapacity();
         int readTimeoutMillis = args.length > 4 ? Integer.parseInt(args[4]) : 30_000;
+        int shards = args.length > 5 ? Integer.parseInt(args[5]) : 4;
 
         Metrics metrics = new Metrics();
-        CacheManager cache = new CacheManager(capacity, metrics);
+        CacheManager cache = new CacheManager(capacity, shards, metrics);
         TcpServer server = new TcpServer(port, cache, metrics, workers, queueCapacity, readTimeoutMillis);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
